@@ -1,5 +1,4 @@
 # import re
-#
 # from selenium import webdriver
 # from selenium.webdriver.common.by import By
 # import pandas as pd
@@ -57,14 +56,14 @@
 #     # Guarda el DataFrame en un archivo de Excel cada 20 propiedades
 #     if (page + 1) % 20 == 0:
 #         file_counter = (page + 1) // 20
-#         all_properties_data.to_excel(f"properties_data_{file_counter}.xlsx", index=False, engine="openpyxl")
+#         all_properties_data.to_excel(f"links{file_counter}.xlsx", index=False, engine="openpyxl")
 #
 # # Cierra el driver de Selenium
 # driver.quit()
 
 
 
-
+import mysql.connector
 import json
 import xml.etree.ElementTree as ET
 from selenium import webdriver
@@ -78,13 +77,55 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import geograpy
 
+
+
+# Establecer la conexión a la base de datos SQL
+try:
+    conn = mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="20759364",
+        database="properties"
+    )
+    print('Conexión exitosa a la base de datos')
+except:
+    print('Error al conectarse a la base de datos')
+
+# Crear una tabla en la base de datos
+cur = conn.cursor()
+cur.execute("""
+    CREATE TABLE IF NOT EXISTS solvia_properties (
+        Referencia TEXT,
+        Title TEXT,
+        Descripcion TEXT,
+        Provincia TEXT,
+        Direccion TEXT,
+        MetrosCuadrados TEXT,
+        Habitaciones TEXT,
+        Banos TEXT,
+        Price TEXT,
+        MainPhoto TEXT,
+        ImageSources JSON,
+        Ciudad TEXT
+    )
+    """)
+conn.commit()
+
+# Eliminar todos los registros de la tabla
+cur.execute("""
+    TRUNCATE TABLE solvia_properties;
+""")
+conn.commit()
+
+
+
 # Inicializar el navegador
 driver = webdriver.Chrome()
 
 
 
 # Lee el archivo Excel y obtiene los URLs de la columna "Referencia"
-df = pd.read_excel('properties_data_19.xlsx', sheet_name='Sheet1', usecols=['link'])
+df = pd.read_excel('links_solvia.xlsx', sheet_name='Sheet1', usecols=['link'])
 
 # Convierte los URLs en una lista
 url_list = df['link'].tolist()
@@ -214,9 +255,33 @@ for url in url_list:
         image_source = 'N/A'
 
 
+    # Crear una lista para almacenar las fuentes de imagen
+    image_sources = []
+
+    try:
+        main_photo_element_2 = wait.until(
+            EC.presence_of_element_located((By.XPATH, "//*[@id='galleryImagenModal']/div/div/div[3]/div[2]/img[1]")))
+        image_source_1 = main_photo_element_2.get_attribute("src")
+        image_sources.append(image_source_1)
+    except:
+        image_source_1 = 'N/A'
+
+    try:
+        main_photo_element_3 = wait.until(
+            EC.presence_of_element_located((By.XPATH, "//*[@id='galleryImagenModal']/div/div/div[3]/div[2]/img[1]")))
+        image_source_3 = main_photo_element_3.get_attribute("src")
+        image_sources.append(image_source_3)
+    except:
+        image_source_3 = 'N/A'
+
+    # Convierte la lista de URL en un diccionario y luego en una cadena JSON
+    image_sources_dict = {'image_sources': image_sources}
+    image_sources_json = json.dumps(image_sources_dict)
+
+
     #imprimir todos los valores por consola
     try:
-        print(f'ciudad: {desired_word}, ref: {referencia_text}, title: {title_text}, direccion: {direccion_text} description: {descripcion_text}, metros: {metros_text}, hab: {dormitorio_text}, baños: {bano_text}, price: {price_text},img: {image_source}, provincia: {desired_word_3}')
+        print(f'ciudad: {desired_word}, ref: {referencia_text}, title: {title_text}, direccion: {direccion_text} description: {descripcion_text}, metros: {metros_text}, hab: {dormitorio_text}, baños: {bano_text}, price: {price_text},img: {image_source}, provincia: {desired_word_3}, image_sources: {image_sources} ')
     except BrokenPipeError:
         print("Error al escribir en el pipe")
 
@@ -229,15 +294,52 @@ for url in url_list:
         "Descripcion": descripcion_text,
         "Direccion": direccion_text,
         "MetrosCuadrados": metros_text,
-        "Dormitorios": dormitorio_text,
-        "Baños": bano_text,
+        "Habitaciones": dormitorio_text,
+        "Banos": bano_text,
         "Price": price_text,
         "MainPhoto": image_source,
+        "ImageSources": image_sources
 
     })
 
     # Convertir la lista de datos en un DataFrame
-    df = pd.DataFrame(data, columns=['Referencia', 'Title', 'Descripcion', 'Direccion', 'MetrosCuadrados', 'Dormitorios', 'Baños', 'Price', 'MainPhoto', 'Ciudad', 'Provincia'])
+    df = pd.DataFrame(data, columns=['Referencia', 'Title', 'Descripcion', 'Provincia', 'Direccion', 'MetrosCuadrados', 'Habitaciones',  'Banos', 'Price', 'MainPhoto', 'ImageSources' 'Ciudad'])
+
+    # Insertar los datos extraídos en la tabla de la base de datos
+    cur.execute("""
+            INSERT INTO solvia_properties (
+                Referencia,
+                Title,
+                Descripcion,
+                Provincia,
+                Direccion,
+                MetrosCuadrados,
+                Habitaciones,
+                Banos,
+                Price,
+                MainPhoto,
+                ImageSources,
+                Ciudad
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+        """, (
+        referencia_text,
+        title_text,
+        descripcion_text,
+        desired_word_3,
+        direccion_text,
+        metros_text,
+        dormitorio_text,
+        bano_text,
+        price_text,
+        image_source,
+        image_sources_json,
+        desired_word
+    ))
+    conn.commit()
+
+    # Añade los datos a la lista
+    data.append(df)
 
 
     if counter % 20 == 0:
@@ -246,3 +348,6 @@ for url in url_list:
 
 driver.quit()
 
+# Cerrar la conexión con la base de datos
+cur.close()
+conn.close()
