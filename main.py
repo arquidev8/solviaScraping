@@ -82,10 +82,10 @@ import geograpy
 # Establecer la conexión a la base de datos SQL
 try:
     conn = mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="20759364",
-        database="properties"
+        host="50.31.177.50",
+        user="lrdlmrgw_user_baes",
+        password="hannanpiper",
+        database="lrdlmrgw_baes"
     )
     print('Conexión exitosa a la base de datos')
 except:
