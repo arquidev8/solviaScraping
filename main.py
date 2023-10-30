@@ -83,7 +83,7 @@ import geograpy
 try:
     conn = mysql.connector.connect(
         host="50.31.177.50",
-        user="lrdlmrgw_user_baes",
+        user="lrdlmrgw_user_baes_hector",
         password="hannanpiper",
         database="lrdlmrgw_baes"
     )
@@ -103,7 +103,7 @@ cur.execute("""
         MetrosCuadrados TEXT,
         Habitaciones TEXT,
         Banos TEXT,
-        Price TEXT,
+        Price INTEGER,
         MainPhoto TEXT,
         ImageSources JSON,
         Ciudad TEXT
@@ -242,10 +242,13 @@ for url in url_list:
 
     # Precio
     try:
-        price_element = wait.until(EC.presence_of_element_located((By.XPATH, "//*[@id='gallery']/div[2]/div[2]/div/p[1]/span[2]")))
-        price_text = price_element.text
+        price_element = wait.until(
+            EC.presence_of_element_located((By.XPATH, "//*[@id='gallery']/div[2]/div[2]/div/p[1]/span[2]")))
+        price_text = price_element.text.replace(' €', '')  # Remover el símbolo de Euro
+        price_integer = int(price_text)  # Convertir a un entero
     except:
-        price_text = 'N/A'
+        price_integer = 'N/A'
+
 
     # Imagen principal
     try:
@@ -288,7 +291,6 @@ for url in url_list:
     # Almacenar los datos en la lista
     data.append({
         "Provincia": desired_word_3,
-        "Ciudad": desired_word,
         "Referencia": referencia_text,
         "Title": title_text,
         "Descripcion": descripcion_text,
@@ -298,7 +300,9 @@ for url in url_list:
         "Banos": bano_text,
         "Price": price_text,
         "MainPhoto": image_source,
-        "ImageSources": image_sources
+        "ImageSources": image_sources,
+        "Ciudad": desired_word
+
 
     })
 
