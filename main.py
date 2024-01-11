@@ -63,7 +63,7 @@ all_properties_data.to_excel("links_solvia_final.xlsx", index=False, engine="ope
 # Cierra el driver de Selenium
 driver.quit()
 
-time.sleep(20)
+
 
 import json
 import xml.etree.ElementTree as ET
@@ -236,78 +236,49 @@ for url in url_list:
     image_sources_dict = {'image_sources': image_sources}
     image_sources_json = json.dumps(image_sources_dict)
 
+
+
+    # Filtrar propiedades sin referencia
+    if not referencia_text or referencia_text == 'N/A':
+        print(f"Referencia vacía o 'N/A' en la URL: {url}. Omitiendo esta propiedad.")
+        continue  # Salta a la próxima iteración del bucle
+
     #imprimir todos los valores por consola
     try:
         print(f'ciudad: {desired_word}, ref: {referencia_text}, title: {title_text}, direccion: {direccion_text} description: {descripcion_text}, metros: {metros_text}, hab: {dormitorio_text}, baños: {bano_text}, price: {price_integer},img: {image_source}, provincia: {desired_word_3}, image_sources: {image_sources} ')
     except BrokenPipeError:
         print("Error al escribir en el pipe")
 
-    # Almacenar los datos en el DataFrame y en la lista de lotes
-    # data_batch.append([
-    #     referencia_text,
-    #     title_text,
-    #     descripcion_text,
-    #     desired_word_3,
-    #     direccion_text,
-    #     metros_text,
-    #     dormitorio_text,
-    #     bano_text,
-    #     price_integer,
-    #     image_source,
-    #     image_sources_json,
-    #     desired_word
-    # ])
-    # all_data = all_data._append({
-    #     "Provincia": desired_word_3,
-    #     "Referencia": referencia_text,
-    #     "Title": title_text,
-    #     "Descripcion": descripcion_text,
-    #     "Direccion": direccion_text,
-    #     "MetrosCuadrados": metros_text,
-    #     "Habitaciones": dormitorio_text,
-    #     "Banos": bano_text,
-    #     "Price": price_integer,
-    #     "MainPhoto": image_source,
-    #     "ImageSources": image_sources_json,
-    #     "Ciudad": desired_word
-    # }, ignore_index=True)
+    data_batch.append([
+        referencia_text,
+        title_text,
+        descripcion_text,
+        desired_word_3,
+        direccion_text,
+        metros_text,
+        dormitorio_text,
+        bano_text,
+        price_integer,
+        image_source,
+        image_sources_json,
+        desired_word
+    ])
 
-    # Verificar si la referencia está vacía o es "N/A"
-    if referencia_text and referencia_text != "N/A":
-        # Almacenar los datos en el DataFrame y en la lista de lotes
-        data_batch.append([
-            referencia_text,
-            title_text,
-            descripcion_text,
-            desired_word_3,
-            direccion_text,
-            metros_text,
-            dormitorio_text,
-            bano_text,
-            price_integer,
-            image_source,
-            image_sources_json,
-            desired_word
-        ])
-        all_data = all_data._append({
-            "Provincia": desired_word_3,
-            "Referencia": referencia_text,
-            "Title": title_text,
-            "Descripcion": descripcion_text,
-            "Direccion": direccion_text,
-            "MetrosCuadrados": metros_text,
-            "Habitaciones": dormitorio_text,
-            "Banos": bano_text,
-            "Price": price_integer,
-            "MainPhoto": image_source,
-            "ImageSources": image_sources_json,
-            "Ciudad": desired_word
-        }, ignore_index=True)
-    else:
-        print(f"Referencia vacía o 'N/A' en la URL: {url}. Omitiendo esta propiedad.")
-        continue  # Salta a la próxima iteración del bucle
-
-
+    # Almacenar los datos acumulados en el DataFrame
+    all_data = all_data._append({
+        "Provincia": desired_word_3,
+        "Referencia": referencia_text,
+        "Title": title_text,
+        "Descripcion": descripcion_text,
+        "Direccion": direccion_text,
+        "MetrosCuadrados": metros_text,
+        "Habitaciones": dormitorio_text,
+        "Banos": bano_text,
+        "Price": price_integer,
+        "MainPhoto": image_source,
+        "ImageSources": image_sources_json,
+        "Ciudad": desired_word
+    }, ignore_index=True)
 
     # Si la lista de lotes tiene 100 elementos, insertarlos en la base de datos
     if len(data_batch) == batch_size:
@@ -319,18 +290,17 @@ for url in url_list:
     # Guardar los datos en un archivo xlsx cada 20 propiedades
     if counter % 20 == 0:
         file_counter = counter // 20
-        df_temp = pd.DataFrame(all_properties)
-        df_temp.to_excel(f"properties_data_{file_counter}.xlsx", index=False, engine="openpyxl")
-        all_properties = []
+        df_temp = pd.DataFrame(all_data)
+        df_temp.to_excel(f"solvia_data_{file_counter}.xlsx", index=False, engine="openpyxl")
 
 # Guardar los datos en un archivo xlsx al finalizar
-df_final = pd.DataFrame(all_properties)
+df_final = pd.DataFrame(all_data)
 df_final.to_excel("solvia_data_final.xlsx", index=False, engine="openpyxl")
 
 driver.quit()
 
 
-time.sleep(20)
+
 
 #INSERTAR DATOS EN BD
 import pandas as pd
